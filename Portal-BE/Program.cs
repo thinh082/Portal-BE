@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Portal_BE.Models.Entities;
+using Portal_BE.Vnpay;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddScoped<IVnpay, Vnpay>();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddDbContext<SinhVienContext>(c =>
         c.UseSqlServer(builder.Configuration.GetConnectionString("Connection")));
