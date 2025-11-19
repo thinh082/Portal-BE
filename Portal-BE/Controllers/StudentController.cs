@@ -296,7 +296,7 @@ public class StudentController : ControllerBase
                 data = schedules
             });
         }
-        catch (Exception ex)
+        catch (Exception ex)//
         {
             _logger.LogError(ex, "Lỗi khi lấy thời khóa biểu");
             return BadRequest(new { message = "Có lỗi xảy ra", code = 500 });
