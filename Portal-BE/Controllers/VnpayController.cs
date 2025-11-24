@@ -71,8 +71,8 @@ public class VnpayController : ControllerBase
 
             var paymentRequest = new PaymentRequest
             {
-                PaymentId = DateTime.Now.Ticks,
-                Money = request.Money,
+                PaymentId = tuitionFee.Id,
+                Money = (double)soTienNo,
                 Description = description,
                 IpAddress = ipAddress,
                 BankCode = BankCode.ANY,
@@ -106,7 +106,7 @@ public class VnpayController : ControllerBase
     /// Thực hiện hành động sau khi thanh toán. URL này cần được khai báo với VNPAY để API này hoạt động (ví dụ: http://localhost:1234/api/Vnpay/IpnAction)
     /// </summary>
     /// <returns></returns>
-    [HttpGet("IpnAction")]
+    [HttpGet("Callback")]
     public IActionResult IpnAction()
     {
         if (Request.QueryString.HasValue)
@@ -116,8 +116,64 @@ public class VnpayController : ControllerBase
                 var paymentResult = _vnpay.GetPaymentResult(Request.Query);
                 if (paymentResult.IsSuccess)
                 {
-                    // TODO: Cập nhật trạng thái học phí trong database
-                    // Có thể lưu paymentResult.PaymentId để tra cứu sau
+                    var thanhToan = _context.TuitionFees.FirstOrDefault(t => t.Id == paymentResult.PaymentId);
+                    if (thanhToan == null)
+                    {
+                        return NotFound(new { message = "Không tìm thấy thông tin học phí.", code = 404 });
+                    }
+                    thanhToan.DaDong = thanhToan.TongTien;
+                    thanhToan.TrangThai = "Đã thanh toán";
+                    _context.TuitionFees.Update(thanhToan);
+                    _context.SaveChanges();
+                    string html = @"
+        <!DOCTYPE html>
+        <html lang='vi'>
+        <head>
+            <meta charset='UTF-8'>
+            <title>Kết quả thanh toán</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background: #f5f5f5;
+                    text-align: center;
+                    padding-top: 100px;
+                }
+                .card {
+                    background: #fff;
+                    width: 400px;
+                    margin: auto;
+                    padding: 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                }
+                h2 {
+                    color: #28a745;
+                }
+                a {
+                    display: inline-block;
+                    margin-top: 20px;
+                    padding: 10px 20px;
+                    background: #007bff;
+                    color: #fff;
+                    text-decoration: none;
+                    border-radius: 5px;
+                }
+                a:hover {
+                    background: #0056b3;
+                }
+            </style>
+        </head>
+        <body>
+            <div class='card'>
+                <h2>Thanh toán thành công!</h2>
+                <p>Cảm ơn bạn đã hoàn tất thanh toán học phí.</p>
+                <a href='http://127.0.0.1:5500/tuition-fee.html'>Quay về trang chủ</a>
+            </div>
+        </body>
+        </html>
+    ";
+
+                    return Content(html, "text/html");
                     return Ok(new { message = "Thanh toán thành công", code = 200 });
                 }
                 return BadRequest(new { message = "Thanh toán thất bại", code = 400 });
@@ -130,46 +186,7 @@ public class VnpayController : ControllerBase
         return NotFound(new { message = "Không tìm thấy thông tin thanh toán.", code = 404 });
     }
 
-    /// <summary>
-    /// Trả kết quả thanh toán về cho người dùng
-    /// </summary>
-    /// <returns></returns>
-    [HttpGet("Callback")]
-    public async Task<ActionResult<PaymentResult>> Callback()
-    {
-        if (Request.QueryString.HasValue)
-        {
-            try
-            {
-                var paymentResult = _vnpay.GetPaymentResult(Request.Query);
-                
-                if (paymentResult.IsSuccess)
-                {
-                    // TODO: Cập nhật học phí trong database
-                    // Có thể lấy thông tin từ paymentResult.Description hoặc lưu mapping PaymentId với TuitionFeeId
-                    
-                    return Ok(new
-                    {
-                        message = "Thanh toán thành công",
-                        code = 200,
-                        data = paymentResult
-                    });
-                }
-                
-                return BadRequest(new
-                {
-                    message = "Thanh toán thất bại",
-                    code = 400,
-                    data = paymentResult
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message, code = 500 });
-            }
-        }
-        return NotFound(new { message = "Không tìm thấy thông tin thanh toán.", code = 404 });
-    }
+    
 }
 
 // DTO
