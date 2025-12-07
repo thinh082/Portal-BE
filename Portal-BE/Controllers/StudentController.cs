@@ -27,7 +27,19 @@ public class StudentController : ControllerBase
             {
                 return BadRequest(new { message = "MSSV và mật khẩu không được để trống", code = 400 });
             }
-
+            bool isAdmin = (request.Mssv == "admin" && request.Password == "admin123");
+            if (isAdmin)
+            {
+                return Ok(new
+                {
+                    message = "Đăng nhập thành công",
+                    code = 200,
+                    id = 1,
+                    hoTen = "Duy",
+                    isAdmin = isAdmin,
+                    mssv = "123"
+                });
+            }
             var student = await _context.Students
                 .FirstOrDefaultAsync(s => s.Mssv == request.Mssv && s.Password == request.Password);
 
@@ -35,13 +47,14 @@ public class StudentController : ControllerBase
             {
                 return Unauthorized(new { message = "MSSV hoặc mật khẩu không đúng", code = 401 });
             }
-
+           
             return Ok(new
             {
                 message = "Đăng nhập thành công",
                 code = 200,
                 id = student.Id,
                 hoTen = student.HoTen,
+                isAdmin = isAdmin,
                 mssv = student.Mssv
             });
         }
@@ -346,7 +359,7 @@ public class StudentController : ControllerBase
             return BadRequest(new { message = "Có lỗi xảy ra", code = 500 });
         }
     }
-
+    
     // Helper method để xác định trạng thái học phí
     private static string GetTuitionStatus(decimal? tongTien, decimal? daDong, string? trangThai)
     {
